@@ -1,10 +1,9 @@
-# 02---cnn-BatchNorm-and-Dropout
 # CNN BatchNorm & Dropout Placement Study
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=flat-square&logo=python)](https://www.python.org/)
-[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-orange?style=flat-square&logo=tensorflow)](https://tensorflow.org/)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Deep Learning](https://img.shields.io/badge/Deep%20Learning-CNN-red?style=flat-square)](https://github.com/Net-AI-Git/02---cnn-BatchNorm-and-Dropout)
+[![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=flat&logo=python)](https://www.python.org/)
+[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-orange?style=flat&logo=tensorflow)](https://tensorflow.org/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat)](LICENSE)
+[![Deep Learning](https://img.shields.io/badge/Deep%20Learning-CNN-red?style=flat)](https://github.com/Net-AI-Git/02---cnn-BatchNorm-and-Dropout)
 
 A systematic empirical study investigating the effects of BatchNormalization and Dropout placement in deep Convolutional Neural Networks using Fashion-MNIST dataset.
 
