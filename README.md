@@ -29,7 +29,7 @@ This project presents a controlled comparative study of regularization technique
 - **Dropout positioning**: Before vs. After BatchNorm layers
 - **Combined regularization strategies**: Optimizing layer ordering for better generalization
 
-The study implements 5 distinct CNN architectures on Fashion-MNIST, providing insights into regularization technique effectiveness and optimal placement strategies for improved model performance.
+The study implements 6 distinct CNN architectures on Fashion-MNIST, providing insights into regularization technique effectiveness and optimal placement strategies for improved model performance.
 
 **Key Research Questions:**
 1. How does BatchNorm placement (pre vs post-activation) affect convergence speed?
@@ -74,14 +74,6 @@ scikit-learn>=1.0.0
 
 ## 📖 Usage
 
-### Running the Complete Study
-
-Execute the main research pipeline:
-
-```bash
-python cnn_keras.py
-```
-
 ### What the Script Does
 
 1. **Data Preparation**: Loads Fashion-MNIST with stratified train/validation split
@@ -93,7 +85,7 @@ python cnn_keras.py
 ### Expected Output
 
 The script will create a `Fashion_MNIST_Research_Results/` directory containing:
-- 5 individual training plots (accuracy + loss curves)
+- 6 individual training plots (accuracy + loss curves)
 - 1 final comparison plot
 - Console output with detailed performance metrics
 
@@ -133,6 +125,7 @@ self.validation_split = 0.2 # Validation set proportion
 3. **Pre-Activation BatchNorm**: Conv → BatchNorm → ReLU pattern  
 4. **BatchNorm-First**: Conv → BatchNorm → ReLU → Dropout sequence
 5. **Dropout-First**: Conv → ReLU → Dropout → BatchNorm sequence
+6. **Classical Regularization**: Conv → ReLU → BatchNorm → Dropout sequence
 
 ### Experimental Setup
 
@@ -161,6 +154,7 @@ self.validation_split = 0.2 # Validation set proportion
 ![Pre-Activation BatchNorm](Fashion_MNIST_Research_Results/3_Pre_Activation_BatchNorm_Training.png)
 ![BatchNorm-First](Fashion_MNIST_Research_Results/4_BatchNorm_First_Regularization_Training.png)
 ![Dropout-First](Fashion_MNIST_Research_Results/5_Dropout_First_Regularization_Training.png)
+![Classical Regularization](Fashion_MNIST_Research_Results/6_Classical_Regularization_Training.png)
 
 ### Comparative Analysis:
 ![Final Comparison](Fashion_MNIST_Research_Results/Final_Test_Accuracy_Comparison.png)
@@ -181,13 +175,16 @@ Expected insights:
 
 - **Deeper Architectures**: Extend study to ResNet-style architectures
 - **Additional Datasets**: Validate findings on CIFAR-10/100
-- **Advanced Regularization**: Include techniques like DropBlock, Spectral Normalization
+- **Advanced Regularization Techniques**: 
+  - L2 Weight Decay (kernel regularization)
+  - DropBlock for spatial regularization
+  - Label Smoothing for overconfidence reduction
+  - L1/ElasticNet regularization for sparsity
 - **Hyperparameter Optimization**: Systematic search for optimal dropout rates
 - **Statistical Significance**: Multiple runs with confidence intervals
 
 ### Implementation Improvements
 
-- Integration with MLflow for experiment tracking
 - Automated hyperparameter tuning with Optuna
 - Model checkpointing for resumable training
 - Distributed training support for larger models
