@@ -90,29 +90,33 @@ The script will automatically:
 ## 📊 Results & Evaluation
 
 ### Training Visualizations
-*Add individual model training plots here:*
 
 **Modern Baseline Training Progress:**
-<!-- ![Modern Baseline](Fashion_MNIST_Research_Results/1_Modern_Baseline_Training.png) -->
+![Modern Baseline](Fashion_MNIST_Research_Results/1_Modern_Baseline_Training.png)
+*Smooth convergence with minimal overfitting. Validation accuracy plateaus around 91%.*
 
 **Post-Activation BatchNorm Results:**
-<!-- ![Post-Activation BatchNorm](Fashion_MNIST_Research_Results/2_Post_Activation_BatchNorm_Training.png) -->
+![Post-Activation BatchNorm](Fashion_MNIST_Research_Results/2_Post_Activation_BatchNorm_Training.png)
+*Shows training instability with significant validation loss spikes, indicating sensitivity to the post-activation BatchNorm placement.*
 
 **Pre-Activation BatchNorm Results:**
-<!-- ![Pre-Activation BatchNorm](Fashion_MNIST_Research_Results/3_Pre_Activation_BatchNorm_Training.png) -->
+![Pre-Activation BatchNorm](Fashion_MNIST_Research_Results/3_Pre_Activation_BatchNorm_Training.png)
+*Demonstrates improved stability compared to post-activation, but still shows some validation fluctuations.*
 
 **BatchNorm-First Regularization:**
-<!-- ![BatchNorm-First](Fashion_MNIST_Research_Results/4_BatchNorm_First_Regularization_Training.png) -->
+![BatchNorm-First](Fashion_MNIST_Research_Results/4_BatchNorm_First_Regularization_Training.png)
+*Stable training with good convergence, showing the benefits of normalization before stochastic regularization.*
 
 **Dropout-First Regularization:**
-<!-- ![Dropout-First](Fashion_MNIST_Research_Results/5_Dropout_First_Regularization_Training.png) -->
+![Dropout-First](Fashion_MNIST_Research_Results/5_Dropout_First_Regularization_Training.png)
+*Exceptional performance with very stable training and the highest final accuracy. Close alignment between training and validation curves indicates excellent generalization.*
 
 **Classical Regularization:**
-<!-- ![Classical Regularization](Fashion_MNIST_Research_Results/6_Classical_Regularization_Training.png) -->
+![Classical Regularization](Fashion_MNIST_Research_Results/6_Classical_Regularization_Training.png)
+*Rapid convergence with early stopping at epoch 6, showing efficient training but slightly lower final performance.*
 
 ### Comprehensive Model Comparison
-*Add the final comparison chart here:*
-<!-- ![Final Comparison](Fashion_MNIST_Research_Results/Final_Test_Accuracy_Comparison.png) -->
+![Final Comparison](Fashion_MNIST_Research_Results/Final_Test_Accuracy_Comparison.png)
 
 ### Key Metrics Evaluated
 - **Test Accuracy** - Final model performance on unseen data
@@ -121,11 +125,37 @@ The script will automatically:
 - **Parameter Efficiency** - Performance per trainable parameter
 
 ### Research Findings
-The study provides empirical evidence for:
-- Optimal placement strategies for BatchNormalization in modern CNNs
-- Impact of regularization order on training dynamics
-- Comparative analysis of classical vs modern normalization approaches
-- Performance benchmarks on Fashion-MNIST across different architectures
+
+**🏆 Performance Rankings:**
+1. **Dropout-First Regularization: 91.79%** - Best overall performance
+2. **Modern Baseline: 90.78%** - Strong baseline without regularization
+3. **Post-Activation BatchNorm: 90.15%** - Classic approach with instability
+4. **Classical Regularization: 88.82%** - Standard but efficient convergence
+5. **BatchNorm-First Regularization: 88.38%** - Stable but lower performance
+6. **Pre-Activation BatchNorm: 88.02%** - Lowest performance despite modern approach
+
+**🔍 Key Insights:**
+
+**Training Stability Analysis:**
+- **Dropout-First** showed the most stable training with excellent train-validation alignment
+- **Post-Activation BatchNorm** exhibited significant instability with validation loss spikes
+- **Classical Regularization** achieved fastest convergence (early stopping at epoch 6)
+- **Modern Baseline** demonstrated smooth learning without regularization artifacts
+
+**Regularization Order Impact:**
+- **Dropout-First strategy outperformed BatchNorm-First by 3.41 percentage points**
+- Applying stochastic regularization before normalization appears to improve feature learning
+- The hypothesis that "normalize first, then regularize" was disproven by empirical results
+
+**BatchNorm Placement Effects:**
+- **Post-activation placement** (90.15%) slightly outperformed **pre-activation** (88.02%)
+- Pre-activation showed better stability but lower final accuracy
+- Classical post-activation approach remains competitive for Fashion-MNIST
+
+**Convergence Patterns:**
+- Models with dropout showed more consistent validation performance
+- BatchNorm-only models exhibited more training instability
+- Early stopping was most effective with classical regularization (6 epochs vs 10-12)
 
 ## 🔬 Technical Implementation Details
 
