@@ -76,7 +76,7 @@ scikit-learn>=1.0.0
 ### What the Script Does
 
 1. **Data Preparation**: Loads Fashion-MNIST with stratified train/validation split
-2. **Model Training**: Trains 5 different CNN architectures with early stopping
+2. **Model Training**: Trains 6 different CNN architectures with early stopping
 3. **Evaluation**: Tests each model and records performance metrics
 4. **Visualization**: Generates training plots and comparison charts
 5. **Analysis**: Provides comprehensive performance summary
