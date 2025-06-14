@@ -90,14 +90,14 @@ The script will automatically:
 ## 📊 Results & Evaluation
 
 ### Training Visualizations
+![Final_Test_Accuracy_Comparison](https://github.com/user-attachments/assets/bc94d721-a63b-4580-911d-1a0e0c55719e)
+<img width="463" alt="summery" src="https://github.com/user-attachments/assets/3a02e224-3c7b-4a93-acd0-dfe94c20d6e7" />
 ![1_Modern_Baseline_Training](https://github.com/user-attachments/assets/274fc299-1378-4e96-ad6d-055141a901ef)
 ![2_Post-Activation_BatchNorm_Training](https://github.com/user-attachments/assets/a002ea6a-c2fd-4535-9aa2-461999782256)
 ![3_Pre-Activation_BatchNorm_Training](https://github.com/user-attachments/assets/a24f7f36-1ee0-4c6b-8fb4-1c493f8d835c)
 ![4_BatchNorm-First_Regularization_Training](https://github.com/user-attachments/assets/cafe20b7-b083-4ec7-a86d-7e82c0474df6)
 ![5_Dropout-First_Regularization_Training](https://github.com/user-attachments/assets/03666d59-ea56-4e62-b164-f691cf2f2d5e)
 ![6_Classical_Regularization_Training](https://github.com/user-attachments/assets/53d658c0-0aea-4be0-88d4-be9038441269)
-![Final_Test_Accuracy_Comparison](https://github.com/user-attachments/assets/bc94d721-a63b-4580-911d-1a0e0c55719e)
-<img width="463" alt="summery" src="https://github.com/user-attachments/assets/3a02e224-3c7b-4a93-acd0-dfe94c20d6e7" />
 
 
 
