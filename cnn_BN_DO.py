@@ -1,682 +1,682 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Enhanced Convolutional Neural Networks with Keras - Dropout & BatchNorm Version
+Professional CNN Research: BatchNorm & Dropout Placement Study on Fashion-MNIST
 ===============================================================================
 
-This script demonstrates advanced CNN architectures using Keras with MNIST dataset.
-It includes models with different combinations of Dropout and Batch Normalization
-to improve model performance and reduce overfitting.
+This study investigates the effects of different regularization techniques
+and their placement order in deep CNN architectures using Fashion-MNIST dataset.
+We examine 6 carefully designed architectures to test specific hypotheses about 
+BatchNormalization and Dropout positioning.
 
-New Features:
-- 4-layer deep CNN with increasing filters (8→16→32→64)
-- Multiple variations with different Dropout and BatchNorm placements
-- Comparison between baseline and enhanced models
-- Comprehensive analysis of regularization techniques
+Research Questions:
+1. How does BatchNorm placement (pre vs post-activation) affect convergence?
+2. What is the optimal order of BatchNorm and Dropout operations?
+3. How do different regularization strategies impact generalization?
 
-Uses proper Train/Validation/Test methodology:
-- Train: 48,000 samples (80% of original training data)
-- Validation: 12,000 samples (20% of original training data)
-- Test: 10,000 samples (separate test set, used only for final evaluation)
+Dataset: Fashion-MNIST (28x28 grayscale images of clothing items)
+- 10 classes: T-shirt, Trouser, Pullover, Dress, Coat, Sandal, Shirt, Sneaker, Bag, Ankle boot
+- More challenging than standard MNIST digits
+- Same input dimensions for direct architecture comparison
 
-Model Variations:
-1. Baseline 4-Layer CNN (no regularization)
-2. CNN with Dropout only
-3. CNN with BatchNorm only
-4. CNN with both Dropout and BatchNorm (after Conv)
-5. CNN with both Dropout and BatchNorm (before Conv)
-6. CNN with advanced regularization pattern
+Models Under Investigation:
+1. Modern Baseline - No regularization control
+2. Post-Activation BatchNorm - Classical BN placement (Ioffe & Szegedy, 2015)
+3. Pre-Activation BatchNorm - Modern BN placement (He et al., 2016)
+4. BatchNorm-First - BN before Dropout hypothesis
+5. Dropout-First - Dropout before BN hypothesis
+6. Classical Regularization - Conv → ReLU → BatchNorm → Dropout sequence
 
-Installation Requirements:
---------------------------
-pip install numpy==2.0.2
-pip install pandas==2.2.2
-pip install tensorflow-cpu==2.18.0
-pip install matplotlib==3.9.2
-pip install scikit-learn
+Requirements:
+pip install tensorflow numpy matplotlib scikit-learn
 """
 
 import os
 import warnings
+from typing import Tuple, List, Dict, Any
 
-# Suppress TensorFlow warning messages
+# Suppress TensorFlow warnings for cleaner output
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 warnings.filterwarnings('ignore')
 
-# Import required libraries
-import keras
-from keras.models import Sequential
-from keras.layers import Dense, Input, Conv2D, MaxPooling2D, Flatten, Dropout, BatchNormalization
-from keras.utils import to_categorical
-from keras.datasets import mnist
-from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.datasets import fashion_mnist
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import EarlyStopping
 
 
-def create_results_directory():
+class CNNResearchPipeline:
     """
-    Create a directory to store all result plots.
-
-    Returns:
-        str: Path to the created directory
-    """
-    dir_name = "Enhanced_CNN_Results"
-
-    if not os.path.exists(dir_name):
-        os.makedirs(dir_name)
-
-    print(f"Results will be saved to: {dir_name}")
-    return dir_name
-
-
-def load_and_preprocess_data():
-    """
-    Load and preprocess the MNIST dataset with proper Train/Validation/Test split.
-
-    Returns:
-        tuple: (X_train, y_train, X_val, y_val, X_test, y_test, num_classes)
-    """
-    print("Loading MNIST dataset...")
-
-    # Load data
-    (X_train_full, y_train_full), (X_test, y_test) = mnist.load_data()
-
-    # Split training data into train and validation (80/20)
-    X_train, X_val, y_train, y_val = train_test_split(
-        X_train_full, y_train_full, test_size=0.2, random_state=42, stratify=y_train_full
-    )
-
-    print(f"Original training data: {X_train_full.shape[0]} samples")
-    print(f"After split - Training: {X_train.shape[0]} samples")
-    print(f"After split - Validation: {X_val.shape[0]} samples")
-    print(f"Test data: {X_test.shape[0]} samples")
-
-    # Reshape to be [samples][height][width][channels]
-    X_train = X_train.reshape(X_train.shape[0], 28, 28, 1).astype('float32')
-    X_val = X_val.reshape(X_val.shape[0], 28, 28, 1).astype('float32')
-    X_test = X_test.reshape(X_test.shape[0], 28, 28, 1).astype('float32')
-
-    # Normalize pixel values to be between 0 and 1
-    X_train = X_train / 255.0
-    X_val = X_val / 255.0
-    X_test = X_test / 255.0
-
-    # Convert target variable into binary categories (one-hot encoding)
-    y_train = to_categorical(y_train)
-    y_val = to_categorical(y_val)
-    y_test = to_categorical(y_test)
-
-    num_classes = y_test.shape[1]
-
-    print(f"Final data shapes:")
-    print(f"  X_train: {X_train.shape}, y_train: {y_train.shape}")
-    print(f"  X_val: {X_val.shape}, y_val: {y_val.shape}")
-    print(f"  X_test: {X_test.shape}, y_test: {y_test.shape}")
-    print(f"Number of classes: {num_classes}")
-
-    return X_train, y_train, X_val, y_val, X_test, y_test, num_classes
-
-
-def create_baseline_4layer_cnn(num_classes):
-    """
-    Create a baseline 4-layer CNN with increasing filters (no regularization).
+    Professional CNN research pipeline for BatchNorm and Dropout placement study.
     
-    Args:
-        num_classes (int): Number of output classes
+    This class encapsulates the entire research workflow including data preparation,
+    model creation, training, evaluation, and visualization.
+    """
+    
+    def __init__(self, results_dir: str = "Fashion_MNIST_Research_Results"):
+        """
+        Initialize the research pipeline.
         
-    Returns:
-        keras.Model: Compiled CNN model
-    """
-    model = Sequential([
-        Input(shape=(28, 28, 1)),
-        Conv2D(8, (5, 5), activation='relu', padding='same'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Conv2D(16, (3, 3), activation='relu', padding='same'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Conv2D(32, (3, 3), activation='relu', padding='same'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Conv2D(64, (3, 3), activation='relu', padding='same'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Flatten(),
-        Dense(128, activation='relu'),
-        Dense(num_classes, activation='softmax')
-    ])
-    
-    model.compile(optimizer='adam',
-                  loss='categorical_crossentropy',
-                  metrics=['accuracy'])
-    
-    return model
-
-
-def create_dropout_only_cnn(num_classes, dropout_rate=0.25):
-    """
-    Create a 4-layer CNN with Dropout only.
-    
-    Args:
-        num_classes (int): Number of output classes
-        dropout_rate (float): Dropout rate
+        Args:
+            results_dir: Directory name for saving results and plots
+        """
+        self.results_dir = results_dir
+        self.setup_results_directory()
         
-    Returns:
-        keras.Model: Compiled CNN model
-    """
-    model = Sequential([
-        Input(shape=(28, 28, 1)),
-        Conv2D(8, (5, 5), activation='relu', padding='same'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(dropout_rate),
-        Conv2D(16, (3, 3), activation='relu', padding='same'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(dropout_rate),
-        Conv2D(32, (3, 3), activation='relu', padding='same'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(dropout_rate),
-        Conv2D(64, (3, 3), activation='relu', padding='same'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(dropout_rate),
-        Flatten(),
-        Dense(128, activation='relu'),
-        Dropout(0.5),  # Higher dropout before final layer
-        Dense(num_classes, activation='softmax')
-    ])
-    
-    model.compile(optimizer='adam',
-                  loss='categorical_crossentropy',
-                  metrics=['accuracy'])
-    
-    return model
-
-
-def create_batchnorm_only_cnn(num_classes):
-    """
-    Create a 4-layer CNN with Batch Normalization only.
-    
-    Args:
-        num_classes (int): Number of output classes
+        # Research configuration
+        self.epochs = 12
+        self.batch_size = 128
+        self.validation_split = 0.2
+        self.random_seed = 42
         
-    Returns:
-        keras.Model: Compiled CNN model
-    """
-    model = Sequential([
-        Input(shape=(28, 28, 1)),
-        Conv2D(8, (5, 5), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Conv2D(16, (3, 3), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Conv2D(32, (3, 3), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Conv2D(64, (3, 3), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Flatten(),
-        Dense(128, activation='relu'),
-        BatchNormalization(),
-        Dense(num_classes, activation='softmax')
-    ])
-    
-    model.compile(optimizer='adam',
-                  loss='categorical_crossentropy',
-                  metrics=['accuracy'])
-    
-    return model
-
-
-def create_dropout_batchnorm_after_cnn(num_classes, dropout_rate=0.25):
-    """
-    Create a 4-layer CNN with both Dropout and BatchNorm (BatchNorm after Conv).
-    
-    Args:
-        num_classes (int): Number of output classes
-        dropout_rate (float): Dropout rate
+        # Set random seeds for reproducibility
+        np.random.seed(self.random_seed)
+        tf.random.set_seed(self.random_seed)
         
-    Returns:
-        keras.Model: Compiled CNN model
-    """
-    model = Sequential([
-        Input(shape=(28, 28, 1)),
-        Conv2D(8, (5, 5), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(dropout_rate),
-        Conv2D(16, (3, 3), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(dropout_rate),
-        Conv2D(32, (3, 3), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(dropout_rate),
-        Conv2D(64, (3, 3), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(dropout_rate),
-        Flatten(),
-        Dense(128, activation='relu'),
-        BatchNormalization(),
-        Dropout(0.5),
-        Dense(num_classes, activation='softmax')
-    ])
-    
-    model.compile(optimizer='adam',
-                  loss='categorical_crossentropy',
-                  metrics=['accuracy'])
-    
-    return model
-
-
-def create_dropout_batchnorm_before_cnn(num_classes, dropout_rate=0.25):
-    """
-    Create a 4-layer CNN with both Dropout and BatchNorm (BatchNorm before activation).
-    
-    Args:
-        num_classes (int): Number of output classes
-        dropout_rate (float): Dropout rate
+        print("=" * 80)
+        print("Professional CNN Research: BatchNorm & Dropout Study on Fashion-MNIST")
+        print("=" * 80)
         
-    Returns:
-        keras.Model: Compiled CNN model
-    """
-    model = Sequential([
-        Input(shape=(28, 28, 1)),
-        Conv2D(8, (5, 5), padding='same'),
-        BatchNormalization(),
-        keras.layers.Activation('relu'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(dropout_rate),
-        Conv2D(16, (3, 3), padding='same'),
-        BatchNormalization(),
-        keras.layers.Activation('relu'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(dropout_rate),
-        Conv2D(32, (3, 3), padding='same'),
-        BatchNormalization(),
-        keras.layers.Activation('relu'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(dropout_rate),
-        Conv2D(64, (3, 3), padding='same'),
-        BatchNormalization(),
-        keras.layers.Activation('relu'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(dropout_rate),
-        Flatten(),
-        Dense(128),
-        BatchNormalization(),
-        keras.layers.Activation('relu'),
-        Dropout(0.5),
-        Dense(num_classes, activation='softmax')
-    ])
-    
-    model.compile(optimizer='adam',
-                  loss='categorical_crossentropy',
-                  metrics=['accuracy'])
-    
-    return model
-
-
-def create_advanced_regularization_cnn(num_classes):
-    """
-    Create a 4-layer CNN with advanced regularization pattern.
-    Uses different dropout rates and strategic BatchNorm placement.
-    
-    Args:
-        num_classes (int): Number of output classes
+    def setup_results_directory(self) -> None:
+        """Create results directory if it doesn't exist."""
+        if not os.path.exists(self.results_dir):
+            os.makedirs(self.results_dir)
+        print(f"Results will be saved to: {self.results_dir}")
         
-    Returns:
-        keras.Model: Compiled CNN model
-    """
-    model = Sequential([
-        Input(shape=(28, 28, 1)),
-        # First block - light regularization
-        Conv2D(8, (5, 5), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(0.1),  # Light dropout
+    def load_and_preprocess_data(self) -> Tuple[np.ndarray, ...]:
+        """
+        Load and preprocess Fashion-MNIST dataset with proper train/validation/test split.
         
-        # Second block - moderate regularization
-        Conv2D(16, (3, 3), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(0.2),
+        Fashion-MNIST contains 28x28 grayscale images of 10 clothing categories:
+        0: T-shirt/top, 1: Trouser, 2: Pullover, 3: Dress, 4: Coat,
+        5: Sandal, 6: Shirt, 7: Sneaker, 8: Bag, 9: Ankle boot
         
-        # Third block - increased regularization
-        Conv2D(32, (3, 3), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(0.3),
+        Returns:
+            Tuple of (X_train, y_train, X_val, y_val, X_test, y_test, num_classes)
+        """
+        print("\n📊 Loading and preprocessing Fashion-MNIST dataset...")
         
-        # Fourth block - high regularization
-        Conv2D(64, (3, 3), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(0.4),
+        # Load Fashion-MNIST data
+        (X_train_full, y_train_full), (X_test, y_test) = fashion_mnist.load_data()
         
-        # Dense layers with strong regularization
-        Flatten(),
-        Dense(128, activation='relu'),
-        BatchNormalization(),
-        Dropout(0.6),  # High dropout before final layer
-        Dense(num_classes, activation='softmax')
-    ])
-    
-    model.compile(optimizer='adam',
-                  loss='categorical_crossentropy',
-                  metrics=['accuracy'])
-    
-    return model
-
-
-def plot_training_history(history, model_name, save_dir):
-    """
-    Create and save a plot showing training history with both accuracy and loss.
-    
-    Args:
-        history: Keras training history object
-        model_name (str): Name of the model
-        save_dir (str): Directory to save the plot
-    """
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-
-    # Plot training & validation accuracy
-    ax1.plot(history.history['accuracy'], 'b-', label='Training Accuracy', linewidth=2)
-    ax1.plot(history.history['val_accuracy'], 'r-', label='Validation Accuracy', linewidth=2)
-    ax1.set_title(f'{model_name} - Accuracy', fontsize=14, fontweight='bold')
-    ax1.set_xlabel('Epoch', fontsize=12)
-    ax1.set_ylabel('Accuracy', fontsize=12)
-    ax1.legend(fontsize=11)
-    ax1.grid(True, alpha=0.3)
-
-    # Dynamic Y-axis scaling for accuracy
-    all_acc = history.history['accuracy'] + history.history['val_accuracy']
-    min_acc = min(all_acc)
-    max_acc = max(all_acc)
-    margin = (max_acc - min_acc) * 0.1
-    ax1.set_ylim([max(0, min_acc - margin), min(1, max_acc + margin)])
-
-    # Plot training & validation loss
-    ax2.plot(history.history['loss'], 'b-', label='Training Loss', linewidth=2)
-    ax2.plot(history.history['val_loss'], 'r-', label='Validation Loss', linewidth=2)
-    ax2.set_title(f'{model_name} - Loss', fontsize=14, fontweight='bold')
-    ax2.set_xlabel('Epoch', fontsize=12)
-    ax2.set_ylabel('Loss', fontsize=12)
-    ax2.legend(fontsize=11)
-    ax2.grid(True, alpha=0.3)
-
-    # Dynamic Y-axis scaling for loss
-    all_loss = history.history['loss'] + history.history['val_loss']
-    min_loss = min(all_loss)
-    max_loss = max(all_loss)
-    margin = (max_loss - min_loss) * 0.1
-    ax2.set_ylim([max(0, min_loss - margin), max_loss + margin])
-
-    plt.tight_layout()
-
-    # Save the plot
-    filename = f"{model_name.replace(' ', '_').replace('(', '').replace(')', '')}.png"
-    filepath = os.path.join(save_dir, filename)
-    plt.savefig(filepath, dpi=300, bbox_inches='tight')
-    plt.close()
-
-    print(f"Saved plot: {filename}")
-
-
-def train_and_evaluate_model(model, X_train, y_train, X_val, y_val, X_test, y_test,
-                             epochs=15, batch_size=150, model_name="CNN", save_dir=None):
-    """
-    Train and evaluate a CNN model with proper Train/Validation/Test methodology.
-    
-    Args:
-        model: Keras model to train
-        X_train, y_train: Training data
-        X_val, y_val: Validation data
-        X_test, y_test: Test data (used only for final evaluation)
-        epochs (int): Number of training epochs
-        batch_size (int): Batch size for training
-        model_name (str): Name for logging purposes
-        save_dir (str): Directory to save plots
+        # Create stratified train/validation split to ensure balanced class distribution
+        X_train, X_val, y_train, y_val = train_test_split(
+            X_train_full, y_train_full, 
+            test_size=self.validation_split, 
+            random_state=self.random_seed, 
+            stratify=y_train_full
+        )
         
-    Returns:
-        tuple: (trained_model, val_accuracy, test_accuracy, history)
-    """
-    print(f"\n{'=' * 70}")
-    print(f"Training {model_name}")
-    print(f"Epochs: {epochs}, Batch Size: {batch_size}")
-    print(f"Train samples: {X_train.shape[0]}, Validation samples: {X_val.shape[0]}")
-    print(f"{'=' * 70}")
-
-    # Train the model using validation data for monitoring
-    history = model.fit(X_train, y_train,
-                        validation_data=(X_val, y_val),
-                        epochs=epochs,
-                        batch_size=batch_size,
-                        verbose=1)
-
-    # Plot and save training history
-    if save_dir:
-        plot_training_history(history, model_name, save_dir)
-
-    # Evaluate on validation set
-    val_scores = model.evaluate(X_val, y_val, verbose=0)
-    val_accuracy = val_scores[1]
-
-    # Final evaluation on test set
-    test_scores = model.evaluate(X_test, y_test, verbose=0)
-    test_accuracy = test_scores[1]
-
-    # Calculate overfitting measure
-    final_train_acc = history.history['accuracy'][-1]
-    overfitting = final_train_acc - val_accuracy
-
-    print(f"\nFinal Results for {model_name}:")
-    print(f"Training Accuracy: {final_train_acc:.4f} ({final_train_acc * 100:.2f}%)")
-    print(f"Validation Accuracy: {val_accuracy:.4f} ({val_accuracy * 100:.2f}%)")
-    print(f"Test Accuracy: {test_accuracy:.4f} ({test_accuracy * 100:.2f}%)")
-    print(f"Overfitting (Train-Val): {overfitting:.4f} ({overfitting * 100:.2f}%)")
-
-    return model, val_accuracy, test_accuracy, history, final_train_acc, overfitting
-
-
-def plot_comparison_results(results, save_dir):
-    """
-    Create comprehensive comparison plots of all models.
+        # Reshape and normalize
+        X_train = X_train.reshape(-1, 28, 28, 1).astype('float32') / 255.0
+        X_val = X_val.reshape(-1, 28, 28, 1).astype('float32') / 255.0
+        X_test = X_test.reshape(-1, 28, 28, 1).astype('float32') / 255.0
+        
+        # One-hot encode labels
+        num_classes = 10
+        y_train = to_categorical(y_train, num_classes)
+        y_val = to_categorical(y_val, num_classes)
+        y_test = to_categorical(y_test, num_classes)
+        
+        print(f"   Training samples: {X_train.shape[0]}")
+        print(f"   Validation samples: {X_val.shape[0]}")
+        print(f"   Test samples: {X_test.shape[0]}")
+        print(f"   Number of classes: {num_classes}")
+        
+        return X_train, y_train, X_val, y_val, X_test, y_test, num_classes
     
-    Args:
-        results (list): List of tuples containing model results
-        save_dir (str): Directory to save the plot
-    """
-    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
+    def create_modern_baseline(self, num_classes: int) -> keras.Model:
+        """
+        Create modern baseline CNN without regularization.
+        
+        Architecture: Progressive filter increase (32→64→128→256) with GlobalAvgPool
+        to reduce parameters while maintaining representational power.
+        
+        Args:
+            num_classes: Number of output classes
+            
+        Returns:
+            Compiled Keras model
+        """
+        model = keras.Sequential([
+            layers.Input(shape=(28, 28, 1)),
+            layers.Conv2D(32, (5, 5), activation='relu', padding='same'),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(256, (3, 3), activation='relu', padding='same'),
+            layers.GlobalAveragePooling2D(),
+            layers.Dense(128, activation='relu'),
+            layers.Dense(num_classes, activation='softmax')
+        ], name="Modern_Baseline")
+        
+        model.compile(
+            optimizer='adam',
+            loss='categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        return model
     
-    model_names = [r[0] for r in results]
-    val_accuracies = [r[1] * 100 for r in results]
-    test_accuracies = [r[2] * 100 for r in results]
-    train_accuracies = [r[4] * 100 for r in results]
-    overfitting = [r[5] * 100 for r in results]
+    def create_post_activation_batchnorm(self, num_classes: int) -> keras.Model:
+        """
+        Create CNN with post-activation BatchNorm (Ioffe & Szegedy, 2015).
+        
+        Pattern: Conv → ReLU → BatchNorm
+        This follows the original BatchNorm paper approach.
+        
+        Args:
+            num_classes: Number of output classes
+            
+        Returns:
+            Compiled Keras model
+        """
+        model = keras.Sequential([
+            layers.Input(shape=(28, 28, 1)),
+            layers.Conv2D(32, (5, 5), activation='relu', padding='same'),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(256, (3, 3), activation='relu', padding='same'),
+            layers.BatchNormalization(),
+            layers.GlobalAveragePooling2D(),
+            layers.Dense(128, activation='relu'),
+            layers.BatchNormalization(),
+            layers.Dense(num_classes, activation='softmax')
+        ], name="Post_Activation_BatchNorm")
+        
+        model.compile(
+            optimizer='adam',
+            loss='categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        return model
     
-    colors = plt.cm.tab10(np.linspace(0, 1, len(results)))
+    def create_pre_activation_batchnorm(self, num_classes: int) -> keras.Model:
+        """
+        Create CNN with pre-activation BatchNorm (He et al., 2016).
+        
+        Pattern: Conv → BatchNorm → ReLU
+        This approach claims better gradient flow in deep networks.
+        
+        Args:
+            num_classes: Number of output classes
+            
+        Returns:
+            Compiled Keras model
+        """
+        model = keras.Sequential([
+            layers.Input(shape=(28, 28, 1)),
+            layers.Conv2D(32, (5, 5), padding='same'),
+            layers.BatchNormalization(),
+            layers.Activation('relu'),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(64, (3, 3), padding='same'),
+            layers.BatchNormalization(),
+            layers.Activation('relu'),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(128, (3, 3), padding='same'),
+            layers.BatchNormalization(),
+            layers.Activation('relu'),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(256, (3, 3), padding='same'),
+            layers.BatchNormalization(),
+            layers.Activation('relu'),
+            layers.GlobalAveragePooling2D(),
+            layers.Dense(128),
+            layers.BatchNormalization(),
+            layers.Activation('relu'),
+            layers.Dense(num_classes, activation='softmax')
+        ], name="Pre_Activation_BatchNorm")
+        
+        model.compile(
+            optimizer='adam',
+            loss='categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        return model
     
-    # Plot 1: Test Accuracy Comparison
-    bars1 = ax1.bar(range(len(model_names)), test_accuracies, color=colors, alpha=0.7)
-    ax1.set_title('Test Accuracy Comparison', fontsize=14, fontweight='bold')
-    ax1.set_ylabel('Test Accuracy (%)', fontsize=12)
-    ax1.set_xticks(range(len(model_names)))
-    ax1.set_xticklabels([name.replace(' ', '\n') for name in model_names], rotation=0, fontsize=10)
-    ax1.grid(True, alpha=0.3, axis='y')
+    def create_batchnorm_first_regularization(self, num_classes: int) -> keras.Model:
+        """
+        Create CNN with BatchNorm before Dropout.
+        
+        Hypothesis: Normalize first, then apply stochastic regularization.
+        Pattern: Conv → BatchNorm → ReLU → Dropout
+        
+        Args:
+            num_classes: Number of output classes
+            
+        Returns:
+            Compiled Keras model
+        """
+        model = keras.Sequential([
+            layers.Input(shape=(28, 28, 1)),
+            layers.Conv2D(32, (5, 5), padding='same'),
+            layers.BatchNormalization(),
+            layers.Activation('relu'),
+            layers.Dropout(0.1),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(64, (3, 3), padding='same'),
+            layers.BatchNormalization(),
+            layers.Activation('relu'),
+            layers.Dropout(0.15),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(128, (3, 3), padding='same'),
+            layers.BatchNormalization(),
+            layers.Activation('relu'),
+            layers.Dropout(0.2),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(256, (3, 3), padding='same'),
+            layers.BatchNormalization(),
+            layers.Activation('relu'),
+            layers.Dropout(0.25),
+            layers.GlobalAveragePooling2D(),
+            layers.Dense(128),
+            layers.BatchNormalization(),
+            layers.Activation('relu'),
+            layers.Dropout(0.4),
+            layers.Dense(num_classes, activation='softmax')
+        ], name="BatchNorm_First_Regularization")
+        
+        model.compile(
+            optimizer='adam',
+            loss='categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        return model
     
-    # Add value labels on bars
-    for bar, acc in zip(bars1, test_accuracies):
-        height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height + 0.1,
-                f'{acc:.1f}%', ha='center', va='bottom', fontweight='bold')
+    def create_classical_regularization_cnn(self, num_classes: int) -> keras.Model:
+        """
+        Create CNN with classical regularization order.
+        
+        Pattern: Conv → ReLU → BatchNorm → Dropout
+        This is a widely adopted sequence in modern CNN architectures.
+        
+        Args:
+            num_classes: Number of output classes
+            
+        Returns:
+            Compiled Keras model
+        """
+        model = keras.Sequential([
+            layers.Input(shape=(28, 28, 1)),
+            layers.Conv2D(32, (5, 5), activation='relu', padding='same'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.1),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.15),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.2),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(256, (3, 3), activation='relu', padding='same'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.25),
+            layers.GlobalAveragePooling2D(),
+            layers.Dense(128, activation='relu'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.4),
+            layers.Dense(num_classes, activation='softmax')
+        ], name="Classical_Regularization")
+        
+        model.compile(
+            optimizer='adam',
+            loss='categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        return model
+        """
+        Create CNN with Dropout before BatchNorm.
+        
+        Hypothesis: Apply stochastic regularization first, then normalize.
+        Pattern: Conv → ReLU → Dropout → BatchNorm
+        
+        Args:
+            num_classes: Number of output classes
+            
+        Returns:
+            Compiled Keras model
+        """
+        model = keras.Sequential([
+            layers.Input(shape=(28, 28, 1)),
+            layers.Conv2D(32, (5, 5), activation='relu', padding='same'),
+            layers.Dropout(0.1),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
+            layers.Dropout(0.15),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
+            layers.Dropout(0.2),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(256, (3, 3), activation='relu', padding='same'),
+            layers.Dropout(0.25),
+            layers.BatchNormalization(),
+            layers.GlobalAveragePooling2D(),
+            layers.Dense(128, activation='relu'),
+            layers.Dropout(0.4),
+            layers.BatchNormalization(),
+            layers.Dense(num_classes, activation='softmax')
+        ], name="Dropout_First_Regularization")
+        
+        model.compile(
+            optimizer='adam',
+            loss='categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        return model
     
-    # Plot 2: Train vs Validation Accuracy
-    x_pos = np.arange(len(model_names))
-    width = 0.35
+    def train_model(self, model: keras.Model, X_train: np.ndarray, y_train: np.ndarray,
+                   X_val: np.ndarray, y_val: np.ndarray) -> keras.callbacks.History:
+        """
+        Train a model with consistent parameters and early stopping.
+        
+        Args:
+            model: Compiled Keras model
+            X_train, y_train: Training data
+            X_val, y_val: Validation data
+            
+        Returns:
+            Training history object
+        """
+        print(f"\n🚀 Training {model.name}...")
+        print(f"   Architecture: {self._count_parameters(model):,} parameters")
+        
+        # Configure early stopping
+        early_stopping = EarlyStopping(
+            monitor='val_accuracy',
+            patience=3,
+            restore_best_weights=True,
+            verbose=1
+        )
+        
+        history = model.fit(
+            X_train, y_train,
+            validation_data=(X_val, y_val),
+            epochs=self.epochs,
+            batch_size=self.batch_size,
+            callbacks=[early_stopping],
+            verbose=1,
+            shuffle=True
+        )
+        
+        return history
     
-    ax2.bar(x_pos - width/2, train_accuracies, width, label='Training', alpha=0.7, color='skyblue')
-    ax2.bar(x_pos + width/2, val_accuracies, width, label='Validation', alpha=0.7, color='lightcoral')
-    ax2.set_title('Training vs Validation Accuracy', fontsize=14, fontweight='bold')
-    ax2.set_ylabel('Accuracy (%)', fontsize=12)
-    ax2.set_xticks(x_pos)
-    ax2.set_xticklabels([name.replace(' ', '\n') for name in model_names], rotation=0, fontsize=10)
-    ax2.legend()
-    ax2.grid(True, alpha=0.3, axis='y')
+    def evaluate_model(self, model: keras.Model, X_test: np.ndarray, 
+                      y_test: np.ndarray) -> Dict[str, float]:
+        """
+        Evaluate model on test set.
+        
+        Args:
+            model: Trained Keras model
+            X_test, y_test: Test data
+            
+        Returns:
+            Dictionary with evaluation metrics
+        """
+        test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+        
+        results = {
+            'test_loss': test_loss,
+            'test_accuracy': test_accuracy
+        }
+        
+        print(f"   Test Accuracy: {test_accuracy:.4f} ({test_accuracy*100:.2f}%)")
+        print(f"   Test Loss: {test_loss:.4f}")
+        
+        return results
     
-    # Plot 3: Overfitting Analysis
-    bars3 = ax3.bar(range(len(model_names)), overfitting, color=colors, alpha=0.7)
-    ax3.set_title('Overfitting Analysis (Train - Validation)', fontsize=14, fontweight='bold')
-    ax3.set_ylabel('Overfitting (%)', fontsize=12)
-    ax3.set_xticks(range(len(model_names)))
-    ax3.set_xticklabels([name.replace(' ', '\n') for name in model_names], rotation=0, fontsize=10)
-    ax3.grid(True, alpha=0.3, axis='y')
-    ax3.axhline(y=0, color='red', linestyle='--', alpha=0.5)
+    def plot_training_results(self, history: keras.callbacks.History, 
+                            model_name: str, model_index: int) -> None:
+        """
+        Create and save training plots with accuracy and loss side by side.
+        
+        Args:
+            history: Training history object
+            model_name: Name of the model for plot title
+            model_index: Index for filename ordering
+        """
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+        
+        # Extract data
+        epochs_range = range(1, len(history.history['accuracy']) + 1)
+        train_acc = [acc * 100 for acc in history.history['accuracy']]
+        val_acc = [acc * 100 for acc in history.history['val_accuracy']]
+        train_loss = history.history['loss']
+        val_loss = history.history['val_loss']
+        
+        # Plot accuracy
+        ax1.plot(epochs_range, train_acc, 'b-', linewidth=2, label='Training Accuracy')
+        ax1.plot(epochs_range, val_acc, 'r-', linewidth=2, label='Validation Accuracy')
+        ax1.set_title(f'{model_name}\nAccuracy', fontsize=14, fontweight='bold')
+        ax1.set_xlabel('Epochs', fontsize=12)
+        ax1.set_ylabel('Accuracy (%)', fontsize=12)
+        ax1.legend(fontsize=11)
+        ax1.grid(True, alpha=0.3)
+        
+        # Smart scaling for accuracy
+        all_acc = train_acc + val_acc
+        acc_min, acc_max = min(all_acc), max(all_acc)
+        acc_margin = (acc_max - acc_min) * 0.1
+        ax1.set_ylim([max(0, acc_min - acc_margin), min(100, acc_max + acc_margin)])
+        
+        # Plot loss
+        ax2.plot(epochs_range, train_loss, 'b-', linewidth=2, label='Training Loss')
+        ax2.plot(epochs_range, val_loss, 'r-', linewidth=2, label='Validation Loss')
+        ax2.set_title(f'{model_name}\nLoss', fontsize=14, fontweight='bold')
+        ax2.set_xlabel('Epochs', fontsize=12)
+        ax2.set_ylabel('Loss', fontsize=12)
+        ax2.legend(fontsize=11)
+        ax2.grid(True, alpha=0.3)
+        
+        # Smart scaling for loss
+        all_loss = train_loss + val_loss
+        loss_min, loss_max = min(all_loss), max(all_loss)
+        loss_margin = (loss_max - loss_min) * 0.1
+        ax2.set_ylim([max(0, loss_min - loss_margin), loss_max + loss_margin])
+        
+        plt.tight_layout()
+        
+        # Save plot
+        filename = f"{model_index}_{model_name.replace(' ', '_')}_Training.png"
+        filepath = os.path.join(self.results_dir, filename)
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"   📊 Saved training plot: {filename}")
     
-    # Add value labels
-    for bar, ovf in zip(bars3, overfitting):
-        height = bar.get_height()
-        ax3.text(bar.get_x() + bar.get_width()/2., height + 0.1,
-                f'{ovf:.1f}%', ha='center', va='bottom', fontweight='bold')
+    def plot_final_comparison(self, results: List[Dict[str, Any]]) -> None:
+        """
+        Create final comparison plot of test accuracies.
+        
+        Args:
+            results: List of dictionaries containing model results
+        """
+        model_names = [r['name'] for r in results]
+        test_accuracies = [r['test_accuracy'] * 100 for r in results]
+        
+        plt.figure(figsize=(12, 8))
+        
+        # Create bar plot with custom colors
+        colors = plt.cm.viridis(np.linspace(0, 1, len(model_names)))
+        bars = plt.bar(range(len(model_names)), test_accuracies, color=colors, alpha=0.8)
+        
+        # Customize plot
+        plt.title('Test Accuracy Comparison on Fashion-MNIST\nBatchNorm & Dropout Placement Study', 
+                 fontsize=16, fontweight='bold', pad=20)
+        plt.xlabel('Model Architecture', fontsize=14)
+        plt.ylabel('Test Accuracy (%)', fontsize=14)
+        
+        # Set x-axis labels
+        plt.xticks(range(len(model_names)), 
+                  [name.replace(' ', '\n') for name in model_names], 
+                  fontsize=11)
+        
+        # Smart scaling for y-axis
+        acc_min, acc_max = min(test_accuracies), max(test_accuracies)
+        acc_margin = (acc_max - acc_min) * 0.1
+        plt.ylim([max(0, acc_min - acc_margin), min(100, acc_max + acc_margin)])
+        
+        # Add value labels on bars
+        for bar, acc in zip(bars, test_accuracies):
+            height = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2., height + 0.1,
+                    f'{acc:.2f}%', ha='center', va='bottom', 
+                    fontweight='bold', fontsize=11)
+        
+        plt.grid(True, alpha=0.3, axis='y')
+        plt.tight_layout()
+        
+        # Save plot
+        filename = "Final_Test_Accuracy_Comparison.png"
+        filepath = os.path.join(self.results_dir, filename)
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"\n📊 Saved final comparison plot: {filename}")
     
-    # Plot 4: Training Progress Comparison (Final 5 epochs avg)
-    final_val_losses = []
-    for r in results:
-        history = r[3]
-        final_val_losses.append(np.mean(history.history['val_loss'][-5:]))  # Last 5 epochs average
+    def _count_parameters(self, model: keras.Model) -> int:
+        """Count trainable parameters in model."""
+        return model.count_params()
     
-    bars4 = ax4.bar(range(len(model_names)), final_val_losses, color=colors, alpha=0.7)
-    ax4.set_title('Final Validation Loss (Last 5 Epochs Avg)', fontsize=14, fontweight='bold')
-    ax4.set_ylabel('Validation Loss', fontsize=12)
-    ax4.set_xticks(range(len(model_names)))
-    ax4.set_xticklabels([name.replace(' ', '\n') for name in model_names], rotation=0, fontsize=10)
-    ax4.grid(True, alpha=0.3, axis='y')
+    def run_research_study(self) -> None:
+        """
+        Run the complete research study.
+        
+        This method orchestrates the entire research pipeline:
+        1. Data preparation
+        2. Model creation and training
+        3. Evaluation and analysis
+        4. Visualization and reporting
+        """
+        # Prepare data
+        X_train, y_train, X_val, y_val, X_test, y_test, num_classes = self.load_and_preprocess_data()
+        
+        # Define model configurations
+        model_configs = [
+            ("Modern Baseline", self.create_modern_baseline),
+            ("Post-Activation BatchNorm", self.create_post_activation_batchnorm),
+            ("Pre-Activation BatchNorm", self.create_pre_activation_batchnorm),
+            ("BatchNorm-First Regularization", self.create_batchnorm_first_regularization),
+            ("Dropout-First Regularization", self.create_dropout_first_regularization),
+            ("Classical Regularization", self.create_classical_regularization_cnn)
+        ]
+        
+        # Store results for final analysis
+        all_results = []
+        
+        print(f"\n🔬 Starting research study with {len(model_configs)} architectures...")
+        print(f"   Using early stopping (patience=3) and stratified validation split")
+        
+        # Train and evaluate each model
+        for i, (model_name, model_creator) in enumerate(model_configs, 1):
+            print(f"\n{'='*80}")
+            print(f"MODEL {i}/{len(model_configs)}: {model_name}")
+            print(f"{'='*80}")
+            
+            # Create and train model
+            model = model_creator(num_classes)
+            history = self.train_model(model, X_train, y_train, X_val, y_val)
+            
+            # Evaluate model
+            test_results = self.evaluate_model(model, X_test, y_test)
+            
+            # Create training plots
+            self.plot_training_results(history, model_name, i)
+            
+            # Store results
+            all_results.append({
+                'name': model_name,
+                'history': history,
+                'test_accuracy': test_results['test_accuracy'],
+                'test_loss': test_results['test_loss'],
+                'parameters': self._count_parameters(model)
+            })
+        
+        # Create final comparison
+        self.plot_final_comparison(all_results)
+        
+        # Print final summary
+        self._print_research_summary(all_results)
     
-    # Add value labels
-    for bar, loss in zip(bars4, final_val_losses):
-        height = bar.get_height()
-        ax4.text(bar.get_x() + bar.get_width()/2., height + 0.005,
-                f'{loss:.3f}', ha='center', va='bottom', fontweight='bold')
-    
-    plt.tight_layout()
-    
-    # Save the plot
-    filename = "Enhanced_CNN_Comprehensive_Comparison.png"
-    filepath = os.path.join(save_dir, filename)
-    plt.savefig(filepath, dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    print(f"\nSaved comprehensive comparison plot: {filename}")
+    def _print_research_summary(self, results: List[Dict[str, Any]]) -> None:
+        """Print comprehensive research summary."""
+        print(f"\n{'='*90}")
+        print("RESEARCH STUDY SUMMARY: BatchNorm & Dropout on Fashion-MNIST")
+        print(f"{'='*90}")
+        
+        print(f"{'Model':<40} {'Parameters':<12} {'Test Acc':<10} {'Best For'}")
+        print("-" * 90)
+        
+        # Find best models for different criteria
+        best_accuracy = max(results, key=lambda x: x['test_accuracy'])
+        best_efficiency = min(results, key=lambda x: x['parameters'])
+        
+        for result in results:
+            name = result['name']
+            params = f"{result['parameters']:,}"
+            test_acc = f"{result['test_accuracy']*100:.2f}%"
+            
+            best_indicators = []
+            if result == best_accuracy:
+                best_indicators.append("Accuracy")
+            if result == best_efficiency:
+                best_indicators.append("Efficiency")
+                
+            best_str = ", ".join(best_indicators)
+            
+            print(f"{name:<40} {params:<12} {test_acc:<10} {best_str}")
+        
+        print(f"\n🏆 KEY FINDINGS:")
+        print(f"   • Best performing model: {best_accuracy['name']} ({best_accuracy['test_accuracy']*100:.2f}%)")
+        print(f"   • Most efficient model: {best_efficiency['name']} ({best_efficiency['parameters']:,} params)")
+        
+        # Calculate baseline improvement
+        baseline = results[0]  # First model is baseline
+        improvements = [(r['test_accuracy'] - baseline['test_accuracy']) * 100 
+                       for r in results[1:]]
+        best_improvement = max(improvements)
+        
+        print(f"   • Best improvement over baseline: +{best_improvement:.2f} percentage points")
+        print(f"\n📁 All results saved to: {self.results_dir}")
+        print(f"   • {len(results)} individual training plots")
+        print(f"   • 1 comprehensive comparison plot")
 
 
 def main():
-    """
-    Main function to run the enhanced CNN training and evaluation process.
-    """
-    print("Enhanced Convolutional Neural Networks with Dropout & BatchNorm")
-    print("=" * 80)
-    print("Training 6 different CNN architectures with regularization techniques")
-    print("Comparing Dropout, BatchNorm, and combined approaches")
-    print("=" * 80)
-
-    # Create results directory
-    save_dir = create_results_directory()
-
-    # Load and preprocess data
-    X_train, y_train, X_val, y_val, X_test, y_test, num_classes = load_and_preprocess_data()
-
-    # Define model architectures
-    model_configs = [
-        ("Baseline 4-Layer", create_baseline_4layer_cnn),
-        ("Dropout Only", create_dropout_only_cnn),
-        ("BatchNorm Only", create_batchnorm_only_cnn),
-        ("Dropout + BatchNorm (After)", create_dropout_batchnorm_after_cnn),
-        ("Dropout + BatchNorm (Before)", create_dropout_batchnorm_before_cnn),
-        ("Advanced Regularization", create_advanced_regularization_cnn)
-    ]
-
-    epochs = 15
-    batch_size = 150
-
-    # Store all results for comparison
-    all_results = []
-
-    # Train all models
-    for i, (model_name, model_creator) in enumerate(model_configs, 1):
-        print(f"\n{'=' * 80}")
-        print(f"MODEL {i}/{len(model_configs)}: {model_name}")
-        print(f"{'=' * 80}")
-
-        # Create model
-        model = model_creator(num_classes)
-
-        # Show model architecture
-        print(f"\nModel Architecture ({model_name}):")
-        model.summary()
-
-        # Train and evaluate
-        trained_model, val_accuracy, test_accuracy, history, train_accuracy, overfitting = train_and_evaluate_model(
-            model, X_train, y_train, X_val, y_val, X_test, y_test,
-            epochs=epochs, batch_size=batch_size,
-            model_name=model_name, save_dir=save_dir
-        )
-
-        # Store results
-        all_results.append((model_name, val_accuracy, test_accuracy, history, train_accuracy, overfitting))
-
-    # Create comprehensive comparison plots
-    print(f"\n{'=' * 80}")
-    print("CREATING COMPREHENSIVE COMPARISON PLOTS")
-    print(f"{'=' * 80}")
-
-    plot_comparison_results(all_results, save_dir)
-
-    # Print final summary
-    print(f"\n{'=' * 90}")
-    print("FINAL SUMMARY - REGULARIZATION TECHNIQUES COMPARISON")
-    print(f"{'=' * 90}")
-
-    print(f"{'Model':<35} {'Train Acc':<10} {'Val Acc':<10} {'Test Acc':<10} {'Overfitting':<12} {'Best For'}")
-    print("-" * 95)
-
-    best_test = max(all_results, key=lambda x: x[2])
-    best_generalization = min(all_results, key=lambda x: x[5])  # Lowest overfitting
-    best_val = max(all_results, key=lambda x: x[1])
-
-    for model_name, val_acc, test_acc, history, train_acc, overfitting in all_results:
-        best_indicators = []
-        if model_name == best_test[0]:
-            best_indicators.append("Test Acc")
-        if model_name == best_generalization[0]:
-            best_indicators.append("Generalization")
-        if model_name == best_val[0]:
-            best_indicators.append("Val Acc")
-        
-        best_str = ", ".join(best_indicators) if best_indicators else ""
-        
-        print(f"{model_name:<35} {train_acc*100:>6.2f}%  {val_acc*100:>6.2f}%  {test_acc*100:>6.2f}%  {overfitting*100:>8.2f}%    {best_str}")
-
-    print(f"\n{'KEY INSIGHTS:'}")
-    print(f"=" * 40)
-    print(f"🏆 Best Test Accuracy: {best_test[0]} ({best_test[2]*100:.2f}%)")
-    print(f"🎯 Best Generalization: {best_generalization[0]} (Overfitting: {best_generalization[5]*100:.2f}%)")
-    print(f"📈 Best Validation: {best_val[0]} ({best_val[1]*100:.2f}%)")
+    """Main function to run the CNN research study."""
+    # Initialize research pipeline
+    research = CNNResearchPipeline()
     
-    # Calculate improvement over baseline
-    baseline_result = all_results[0]  # First model is baseline
-    best_improvement = ((best_test[2] - baseline_result[2]) * 100)
-    print(f"💡 Improvement over baseline: {best_improvement:.2f} percentage points")
-
-    print(f"\nAll results saved to: {save_dir}")
-    print(f"Total files created: {len(all_results) + 1} PNG files")
-    print(f"- {len(all_results)} individual model training plots")
-    print(f"- 1 comprehensive comparison plot")
-
-    print(f"\n📊 METHODOLOGY:")
-    print(f"- Training: {X_train.shape[0]} samples")
-    print(f"- Validation: {X_val.shape[0]} samples (for monitoring)")
-    print(f"- Test: {X_test.shape[0]} samples (for final evaluation)")
-    print(f"- Epochs: {epochs}, Batch Size: {batch_size}")
+    # Run complete study
+    research.run_research_study()
+    
+    print(f"\n✅ Research study completed successfully!")
+    print(f"Check the '{research.results_dir}' directory for all results and plots.")
 
 
 if __name__ == "__main__":
