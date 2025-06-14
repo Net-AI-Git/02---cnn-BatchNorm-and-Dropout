@@ -302,6 +302,51 @@ class CNNResearchPipeline:
         
         return model
     
+    def create_dropout_first_regularization(self, num_classes: int) -> keras.Model:
+        """
+        Create CNN with Dropout before BatchNorm.
+        
+        Hypothesis: Apply stochastic regularization first, then normalize.
+        Pattern: Conv → ReLU → Dropout → BatchNorm
+        
+        Args:
+            num_classes: Number of output classes
+            
+        Returns:
+            Compiled Keras model
+        """
+        model = keras.Sequential([
+            layers.Input(shape=(28, 28, 1)),
+            layers.Conv2D(32, (5, 5), activation='relu', padding='same'),
+            layers.Dropout(0.1),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
+            layers.Dropout(0.15),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
+            layers.Dropout(0.2),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(256, (3, 3), activation='relu', padding='same'),
+            layers.Dropout(0.25),
+            layers.BatchNormalization(),
+            layers.GlobalAveragePooling2D(),
+            layers.Dense(128, activation='relu'),
+            layers.Dropout(0.4),
+            layers.BatchNormalization(),
+            layers.Dense(num_classes, activation='softmax')
+        ], name="Dropout_First_Regularization")
+        
+        model.compile(
+            optimizer='adam',
+            loss='categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        return model
+    
     def create_classical_regularization_cnn(self, num_classes: int) -> keras.Model:
         """
         Create CNN with classical regularization order.
